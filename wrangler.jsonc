@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "reda-btp-front",
+  "compatibility_date": "2026-09-13",
+  "assets": {
+    "directory": "./dist/reda-btp-front",
+    "not_found_handling": "single-page-application"
+  }
+}
