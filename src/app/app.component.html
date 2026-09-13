@@ -1,26 +1,90 @@
-<header><a class="brand" href="#top"><span>▰</span> Mon Guide Travaux</a><nav><a href="#choisir">Choisir</a><a href="#timeline">Les étapes</a><a href="#calculateur">Calculateur</a></nav></header>
-<main id="top">
-  <section class="hero"><div><p class="eyebrow">VOS TRAVAUX, ENFIN COMPRÉHENSIBLES</p><h1>Suivez votre chantier<br><em>en toute confiance.</em></h1><p class="lead">Comprenez ce que fera l’artisan, dans quel ordre, avec quels produits et quels contrôles.</p><a class="button" href="#choisir">Créer mon guide <span>→</span></a></div><div class="hero-art" aria-hidden="true"><div class="tile t1"></div><div class="tile t2"></div><div class="tile t3"></div><div class="tool">⌁</div></div></section>
+<header>
+  <a class="brand" href="#top"><span>▰</span> Mon Guide Travaux</a>
+  <nav><a href="#projet">Mon projet</a><a href="#guide">Guide</a><a href="#sources">Sources</a></nav>
+  <div class="country-switch" aria-label="Choisir le pays">
+    <button *ngFor="let c of countries" (click)="selectCountry(c.code)" [class.active]="country===c.code">{{c.drapeau}} {{c.nom}}</button>
+  </div>
+</header>
 
-  <div *ngIf="loading" class="state">Préparation du guide…</div><div *ngIf="error" class="alert">{{error}}</div>
-  <ng-container *ngIf="guide">
-    <section id="choisir" class="section"><p class="eyebrow">01 — VOTRE PROJET</p><h2>Salle de bain <span>→</span> Carrelage</h2><p class="section-intro">Trois réponses suffisent pour adapter les étapes. Vous pouvez choisir « Je ne sais pas ».</p>
-      <form [formGroup]="projectForm" (ngSubmit)="generate()" class="question-grid">
-        <label *ngFor="let q of guide.questions"><span>{{q.libelle}}</span><select [formControlName]="q.code"><option *ngFor="let o of q.options" [value]="o.code">{{o.libelle}}</option></select></label>
-        <button class="button" type="submit">Générer mon guide <span>→</span></button>
-      </form>
-      <div *ngIf="personnalise" class="recommendation"><strong>Notre lecture de votre projet</strong><p>{{personnalise.resume}}</p><ul><li *ngFor="let r of personnalise.recommandations">{{r}}</li></ul></div>
-    </section>
+<main id="top" *ngIf="guide">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">GUIDES TRAVAUX — {{countryName() | uppercase}}</p>
+      <h1>Comprendre avant<br><em>de commencer.</em></h1>
+      <p class="lead">Les choix, l’ordre des interventions et les contrôles expliqués simplement, avec les spécificités de votre pays.</p>
+      <a class="button" href="#projet">Configurer mon projet <span>→</span></a>
+    </div>
+    <div class="country-panel">
+      <span class="big-flag">{{countries[country==='FR'?0:1].drapeau}}</span>
+      <p>MODE ACTIF</p><h2>{{countryName()}}</h2>
+      <ul><li *ngFor="let note of guide.conseilsPays | slice:1:4">{{note}}</li></ul>
+    </div>
+  </section>
 
-    <section class="section materials"><p class="eyebrow">02 — BIEN CHOISIR</p><h2>Les principaux carrelages</h2><div class="material-grid"><article *ngFor="let m of guide.materiaux"><div class="material-number">{{m.nom.charAt(0)}}</div><p class="tag">{{m.usages}}</p><h3>{{m.nom}}</h3><p>{{m.description}}</p><dl><div><dt>Entretien</dt><dd>{{m.entretien}}</dd></div><div><dt>Résistance</dt><dd>{{m.resistance}}</dd></div><div><dt>Pose</dt><dd>{{m.difficultePose}}</dd></div><div><dt>Budget</dt><dd>{{m.niveauPrix}}</dd></div></dl><p class="plus">+ {{m.avantages.join(' · ')}}</p><p class="minus">− {{m.inconvenients.join(' · ')}}</p></article></div><p class="notice">Les propriétés dépendent du produit exact. Vérifiez toujours sa fiche technique et l’usage prévu par le fabricant.</p></section>
+  <section id="projet" class="section">
+    <p class="eyebrow">01 — CHOISISSEZ LA PIÈCE</p><h2>Où intervenez-vous ?</h2>
+    <div class="room-grid">
+      <button *ngFor="let piece of pieces" (click)="selectPiece(piece.code)" [class.active]="pieceCode===piece.code">
+        <span>{{piece.icon}}</span><strong>{{piece.nom}}</strong><small>{{piece.description}}</small>
+      </button>
+    </div>
+    <p class="eyebrow work-title">02 — CHOISISSEZ LES TRAVAUX</p>
+    <div class="work-grid">
+      <button *ngFor="let work of works()" (click)="selectWork(work.code)" [class.active]="workCode===work.code">
+        <span>{{work.icon}}</span><div><strong>{{work.nom}}</strong><small>{{work.description}}</small></div>
+      </button>
+    </div>
+  </section>
 
-    <section id="timeline" class="section timeline"><div class="timeline-head"><div><p class="eyebrow">03 — CHRONOLOGIE</p><h2>Du diagnostic à la réception</h2></div><div class="progress-card"><strong>{{progress()}}%</strong><span>{{finished.size}} étape(s) cochée(s)</span><div><i [style.width.%]="progress()"></i></div></div></div>
-      <details *ngFor="let step of steps(); let first=first" [open]="first || finished.has(step.code)" [class.done]="finished.has(step.code)"><summary><button type="button" class="check" (click)="$event.preventDefault();toggle(step.code)" [attr.aria-label]="'Marquer '+step.titre">{{finished.has(step.code)?'✓':''}}</button><span class="step-no">{{step.ordre | number:'2.0'}}</span><span><small>{{step.importance}}</small><b>{{step.titre}}</b></span><span class="chevron">⌄</span></summary><div class="step-content"><p>{{step.description}}</p><div class="detail-grid"><div><h4>Ce que vous pouvez vérifier</h4><ul><li *ngFor="let c of step.controles">{{c}}</li></ul></div><div><h4>Produits & outils</h4><p>{{step.produits[0].nom}}</p><p>{{step.outils.join(' · ')}}</p></div><div><h4>À anticiper</h4><p>Durée : {{step.dureeIndicative}}</p><p>Attente : {{step.tempsAttente}}</p></div></div></div></details>
-    </section>
+  <section id="guide" class="section guide-intro">
+    <div><p class="eyebrow">03 — PERSONNALISEZ</p><h2>{{guide.titre}}</h2><p class="lead">{{guide.introduction}}</p></div>
+    <aside class="warning"><strong>Point de vigilance</strong><p>{{guide.avertissement}}</p></aside>
+    <form (ngSubmit)="generate()" class="question-grid">
+      <label *ngFor="let question of guide.questions">
+        <span>{{question.libelle}}</span><small *ngIf="question.aide">{{question.aide}}</small>
+        <select [(ngModel)]="answers[question.code]" [name]="question.code"><option *ngFor="let option of question.options" [value]="option.code">{{option.libelle}}</option></select>
+      </label>
+      <button class="button" type="submit">Adapter le guide <span>→</span></button>
+    </form>
+    <div class="recommendation" *ngIf="personnalise"><strong>{{personnalise.resume}}</strong><ul><li *ngFor="let r of personnalise.recommandations">{{r}}</li></ul></div>
+  </section>
 
-    <section id="calculateur" class="section calculator"><div><p class="eyebrow">04 — ESTIMER</p><h2>Combien de carrelage prévoir ?</h2><p>Mesurez en mètres. Le résultat inclut la marge de coupe et de casse.</p></div><form [formGroup]="surfaceForm" (ngSubmit)="calculate()"><label>Longueur<input type="number" step="0.1" formControlName="longueur"></label><label>Largeur<input type="number" step="0.1" formControlName="largeur"></label><label>Hauteur<input type="number" step="0.1" formControlName="hauteur"></label><label>Marge (%)<input type="number" formControlName="margePourcent"></label><label class="checkbox"><input type="checkbox" formControlName="inclureSol"> Sol</label><label class="checkbox"><input type="checkbox" formControlName="inclureMurs"> Murs</label><button class="button" [disabled]="surfaceForm.invalid">Calculer</button></form><div *ngIf="surfaceResult" class="result"><span>Surface nette {{surfaceResult.surfaceNette}} m²</span><strong>{{surfaceResult.total}} m²</strong><small>à prévoir, marge comprise (estimation indicative)</small></div></section>
+  <section class="section materials" *ngIf="guide.materiaux.length">
+    <p class="eyebrow">04 — COMPRENDRE LES CHOIX</p><h2>Matériaux et systèmes</h2>
+    <div class="material-grid">
+      <article *ngFor="let m of guide.materiaux">
+        <span class="material-letter">{{m.nom.charAt(0)}}</span><p class="tag">{{m.usages}}</p><h3>{{m.nom}}</h3><p>{{m.description}}</p>
+        <dl><div><dt>Entretien</dt><dd>{{m.entretien}}</dd></div><div><dt>Résistance</dt><dd>{{m.resistance}}</dd></div><div><dt>Pose</dt><dd>{{m.difficultePose}}</dd></div><div><dt>Budget relatif</dt><dd>{{m.niveauPrix}}</dd></div></dl>
+        <p class="plus">+ {{m.avantages.join(' · ')}}</p><p class="minus">− {{m.inconvenients.join(' · ')}}</p>
+      </article>
+    </div>
+  </section>
 
-    <section class="section last-grid"><div><p class="eyebrow">05 — QUESTIONS UTILES</p><h2>À poser à l’artisan</h2><ul class="questions"><li *ngFor="let q of guide.questionsArtisan"><input type="checkbox"> {{q}}</li></ul></div><div><p class="eyebrow">GLOSSAIRE</p><h2>Les mots du chantier</h2><dl class="glossary"><div *ngFor="let e of glossaryEntries()"><dt>{{e[0]}}</dt><dd>{{e[1]}}</dd></div></dl></div></section>
-  </ng-container>
+  <section id="timeline" class="section timeline">
+    <div class="timeline-head"><div><p class="eyebrow">05 — SUIVRE LE CHANTIER</p><h2>{{steps().length}} étapes, dans le bon ordre</h2></div><div class="progress"><strong>{{progress()}}%</strong><span>de votre parcours coché</span><i><b [style.width.%]="progress()"></b></i></div></div>
+    <details *ngFor="let step of steps(); let first=first" [open]="first" [class.done]="finished.has(step.code)">
+      <summary><button type="button" class="check" (click)="$event.preventDefault();toggle(step.code)">{{finished.has(step.code)?'✓':''}}</button><span class="number">{{step.ordre | number:'2.0'}}</span><span><small>{{step.importance}}</small><b>{{step.titre}}</b></span><span>⌄</span></summary>
+      <div class="step-body"><p class="objective">Objectif — {{step.objectif}}</p><p>{{step.description}}</p><p class="country-note" *ngIf="step.notePays"><strong>{{countries[country==='FR'?0:1].drapeau}} À vérifier en {{countryName()}}</strong>{{step.notePays}}</p>
+        <div class="detail-grid"><div><h4>Ce que vous pouvez vérifier</h4><ul><li *ngFor="let c of step.controles">{{c}}</li></ul></div><div><h4>Produits & outils</h4><p>{{step.produits[0].nom}}</p></div><div><h4>Temps</h4><p>{{step.dureeIndicative}}</p><small>{{step.tempsAttente}}</small></div></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="section calculator" *ngIf="showCalculator()">
+    <div><p class="eyebrow">06 — ESTIMER</p><h2>Surface à prévoir</h2><p>Estimation indicative à confirmer après mesure sur chantier.</p></div>
+    <form [formGroup]="surfaceForm" (ngSubmit)="calculate()"><label>Longueur (m)<input type="number" step=".1" formControlName="longueur"></label><label>Largeur (m)<input type="number" step=".1" formControlName="largeur"></label><label>Hauteur (m)<input type="number" step=".1" formControlName="hauteur"></label><label>Marge (%)<input type="number" formControlName="margePourcent"></label><label>Largeur de porte (m)<input type="number" step=".1" formControlName="porteLargeur"></label><label>Hauteur de porte (m)<input type="number" step=".1" formControlName="porteHauteur"></label><label class="checkbox"><input type="checkbox" formControlName="inclureSol"> Sol</label><label class="checkbox"><input type="checkbox" formControlName="inclureMurs"> Murs</label><button class="button">Calculer</button></form>
+    <div class="result" *ngIf="surfaceResult"><span>Surface nette : {{surfaceResult.surfaceNette}} m²</span><strong>{{surfaceResult.total}} m²</strong><small>marge comprise</small></div>
+  </section>
+
+  <section class="section two-columns">
+    <div><p class="eyebrow">QUESTIONS À POSER</p><h2>Avant de signer</h2><ul class="questions"><li *ngFor="let q of guide.questionsArtisan">□ {{q}}</li></ul></div>
+    <div><p class="eyebrow">SPÉCIFICITÉS {{countryName() | uppercase}}</p><h2>À ne pas oublier</h2><ul class="country-list"><li *ngFor="let c of guide.conseilsPays">{{c}}</li></ul></div>
+  </section>
+
+  <section id="sources" class="section sources">
+    <div><p class="eyebrow">SOURCES & LIMITES</p><h2>Informations vérifiables</h2><p>Les références évoluent. L’artisan doit confirmer l’édition applicable, le domaine d’emploi des produits et les règles locales avant travaux.</p></div>
+    <div><a *ngFor="let source of guide.sources" [href]="source.url" target="_blank" rel="noopener"><small>{{source.organisme}}</small><strong>{{source.label}}</strong><span>↗</span></a></div>
+  </section>
 </main>
-<footer><strong>Mon Guide Travaux</strong><p>Un outil pédagogique. Il ne remplace pas le diagnostic ni la responsabilité d’un professionnel qualifié.</p></footer>
+
+<footer><strong>Mon Guide Travaux</strong><p>Outil pédagogique — ne remplace pas le diagnostic, les calculs ni la responsabilité d’un professionnel qualifié.</p></footer>

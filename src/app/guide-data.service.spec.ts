@@ -2,33 +2,31 @@ import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { GuideDataService } from './guide-data.service';
 
-describe('GuideDataService', () => {
-  let service: GuideDataService;
+describe('GuideDataService',()=>{
+  let service:GuideDataService;
+  beforeEach(()=>{TestBed.configureTestingModule({});service=TestBed.inject(GuideDataService);});
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(GuideDataService);
+  it('propose plusieurs travaux par pièce',()=>{
+    expect(service.worksFor('salle-de-bain').map(w=>w.code)).toContain('plomberie');
+    expect(service.worksFor('piece-de-vie').map(w=>w.code)).toContain('peinture');
   });
 
-  it('retire les étapes de dépose pour un support neuf', async () => {
-    const guide = await firstValueFrom(service.personnaliser({etatSupport:'neuf', douche:'non', zone:'sol'}));
-    const codes = guide.etapes.map(etape => etape.code);
-    expect(codes).not.toContain('depose');
-    expect(codes).not.toContain('gravats');
-    expect(codes).not.toContain('etancheite');
+  it('adapte réellement le guide au pays',async()=>{
+    const france=await firstValueFrom(service.getGuide('FR','terrasse','etancheite'));
+    const maroc=await firstValueFrom(service.getGuide('MA','terrasse','etancheite'));
+    expect(france.conseilsPays[0]).not.toEqual(maroc.conseilsPays[0]);
+    expect(maroc.conseilsPays[0]).toContain('UV');
   });
 
-  it('ajoute les étapes de dépose et étanchéité quand elles sont nécessaires', async () => {
-    const guide = await firstValueFrom(service.personnaliser({etatSupport:'ancien-a-retirer', douche:'oui', zone:'les-deux'}));
-    const codes = guide.etapes.map(etape => etape.code);
-    expect(codes).toContain('depose');
-    expect(codes).toContain('gravats');
-    expect(codes).toContain('etancheite');
-    expect(codes).toContain('points-singuliers');
+  it('filtre les étapes conditionnelles',async()=>{
+    const guide=await firstValueFrom(service.getGuide('FR','salle-de-bain','carrelage'));
+    const result=await firstValueFrom(service.personnaliser(guide,{support:'bon',zone:'sol',depose:'non',eau:'non'}));
+    expect(result.etapes.map(e=>e.code)).not.toContain('depose');
+    expect(result.etapes.map(e=>e.code)).not.toContain('etancheite');
   });
 
-  it('calcule une surface avec sa marge', async () => {
-    const result = await firstValueFrom(service.calculerSurface({longueur:4, largeur:3, hauteur:2.5, inclureSol:true, inclureMurs:false, margePourcent:10, ouvertures:[]}));
+  it('ne déduit pas une porte de la surface du sol',async()=>{
+    const result=await firstValueFrom(service.calculerSurface({longueur:4,largeur:3,hauteur:2.5,inclureSol:true,inclureMurs:false,margePourcent:10,ouvertures:[{largeur:.8,hauteur:2,quantite:1}]}));
     expect(result.surfaceNette).toBe(12);
     expect(result.total).toBe(13.2);
   });

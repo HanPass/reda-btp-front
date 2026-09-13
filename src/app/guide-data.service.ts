@@ -1,31 +1,27 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { GUIDE_DEMO } from './guide-data';
-import { Guide, GuidePersonnalise, SurfaceRequest, SurfaceResult } from './models';
+import { COUNTRIES, createGuide, PIECES, WORKS } from './guide-data';
+import { CountryCode, CountryProfile, Guide, GuidePersonnalise, Piece, SurfaceRequest, SurfaceResult, WorkType } from './models';
 
 @Injectable({providedIn:'root'})
 export class GuideDataService {
-  getGuide(): Observable<Guide> { return of(GUIDE_DEMO); }
-
-  personnaliser(reponses: Record<string,string>): Observable<GuidePersonnalise> {
-    const etapes = GUIDE_DEMO.etapes
-      .filter(etape => !['protection','depose','gravats'].includes(etape.code) || reponses['etatSupport'] === 'ancien-a-retirer')
-      .filter(etape => !['etancheite','points-singuliers'].includes(etape.code) || reponses['douche'] === 'oui');
-    const recommandations: string[] = [];
-    if (['sol','les-deux'].includes(reponses['zone'] ?? '')) recommandations.push('Pour le sol, privilégiez un carrelage prévu pour cet usage et offrant une adhérence adaptée.');
-    if (reponses['douche'] === 'oui') recommandations.push('Pour la douche, vérifiez la compatibilité du revêtement, de la colle et du système d’étanchéité.');
-    if (recommandations.length === 0) recommandations.push('Vérifiez toujours la compatibilité indiquée sur la fiche technique du fabricant.');
-    const zone = ({sol:'sol',mur:'murs','les-deux':'sol et murs'} as Record<string,string>)[reponses['zone']] ?? 'zone à confirmer';
-    const support = ({'ancien-a-retirer':'ancien carrelage à retirer',neuf:'neuf',recouvrir:'ancien carrelage conservé'} as Record<string,string>)[reponses['etatSupport']] ?? 'à diagnostiquer';
-    return of({resume:`Projet ${zone} — support ${support}.`, recommandations, etapes, questionsArtisan:GUIDE_DEMO.questionsArtisan, glossaire:GUIDE_DEMO.glossaire});
+  countries():CountryProfile[]{return COUNTRIES;}
+  pieces():Piece[]{return PIECES;}
+  worksFor(pieceCode:string):WorkType[]{const codes=PIECES.find(p=>p.code===pieceCode)?.travaux??[];return WORKS.filter(w=>codes.includes(w.code));}
+  getGuide(country:CountryCode,piece:string,work:string):Observable<Guide>{return of(createGuide(country,piece,work));}
+  personnaliser(guide:Guide,reponses:Record<string,string>):Observable<GuidePersonnalise>{
+    const etapes=guide.etapes.filter(e=>!e.visibleWhen||Object.entries(e.visibleWhen).every(([k,v])=>v.includes(reponses[k])));
+    const recommandations=[guide.conseilsPays[0]];
+    if(reponses['support']==='degrade')recommandations.push('Le support est dégradé : diagnostic et réparation sont prioritaires avant toute finition.');
+    if(reponses['humidite']==='oui'||reponses['infiltration']==='oui')recommandations.push('L’humidité visible doit être diagnostiquée à sa source avant de recouvrir.');
+    if(reponses['zoneHumide']==='oui'||reponses['eau']==='oui')recommandations.push('L’exposition à l’eau impose de valider protections et compatibilités avant fermeture.');
+    const pays=COUNTRIES.find(p=>p.code===guide.pays)?.nom;
+    return of({resume:`${guide.titre} — ${pays}. ${etapes.length} étapes adaptées à vos réponses.`,recommandations,etapes,questionsArtisan:guide.questionsArtisan,glossaire:guide.glossaire});
   }
-
-  calculerSurface(r: SurfaceRequest): Observable<SurfaceResult> {
-    const surfaceBrute = (r.inclureSol ? r.longueur*r.largeur : 0) + (r.inclureMurs ? 2*(r.longueur+r.largeur)*r.hauteur : 0);
-    const deductions = r.ouvertures.reduce((total,o)=>total+o.largeur*o.hauteur*o.quantite,0);
-    const surfaceNette = Math.max(0,surfaceBrute-deductions);
-    const marge = surfaceNette*r.margePourcent/100;
-    const round = (value:number):number => Math.round(value*100)/100;
-    return of({surfaceBrute:round(surfaceBrute),deductions:round(deductions),surfaceNette:round(surfaceNette),marge:round(marge),total:round(surfaceNette+marge)});
+  calculerSurface(r:SurfaceRequest):Observable<SurfaceResult>{
+    const brute=(r.inclureSol?r.longueur*r.largeur:0)+(r.inclureMurs?2*(r.longueur+r.largeur)*r.hauteur:0);
+    const deductions=r.inclureMurs?r.ouvertures.reduce((t,o)=>t+o.largeur*o.hauteur*o.quantite,0):0;
+    const nette=Math.max(0,brute-deductions),marge=nette*r.margePourcent/100,round=(v:number)=>Math.round(v*100)/100;
+    return of({surfaceBrute:round(brute),deductions:round(deductions),surfaceNette:round(nette),marge:round(marge),total:round(nette+marge)});
   }
 }
