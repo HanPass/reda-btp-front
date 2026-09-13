@@ -6,3 +6,4 @@ export interface Etape { code: string; ordre: number; titre: string; objectif: s
 export interface Guide { code: string; titre: string; introduction: string; avertissement: string; questions: Question[]; materiaux: Materiau[]; etapes: Etape[]; questionsArtisan: string[]; glossaire: Record<string,string> }
 export interface GuidePersonnalise { resume: string; recommandations: string[]; etapes: Etape[]; questionsArtisan: string[]; glossaire: Record<string,string> }
 export interface SurfaceResult { surfaceBrute: number; deductions: number; surfaceNette: number; marge: number; total: number }
+export interface SurfaceRequest { longueur: number; largeur: number; hauteur: number; inclureSol: boolean; inclureMurs: boolean; margePourcent: number; ouvertures: {largeur:number; hauteur:number; quantite:number}[] }
